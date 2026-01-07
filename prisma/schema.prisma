@@ -93,8 +93,8 @@ model Class {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  mentorTeacher   Teacher    @relation("MentorTeacher", fields: [mentorTeacherId], references: [id])
-  regularTeacher  Teacher    @relation("RegularTeacher", fields: [regularTeacherId], references: [id])
+  mentorTeacher   Teacher?   @relation("MentorTeacher", fields: [mentorTeacherId], references: [id])
+  regularTeacher  Teacher?   @relation("RegularTeacher", fields: [regularTeacherId], references: [id])
   students        Student[]
   schedules       Schedule[]
 }
