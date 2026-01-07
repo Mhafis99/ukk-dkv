@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher  Teacher?
+  student  Student?
+}
+
+// Enum for user roles
+enum UserRole {
+  ADMIN
+  GURU
+  SISWA
+}
+
+// Teacher model with two statuses: Regular Teacher and Mentor Teacher
+model Teacher {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  nip             String        @unique
+  name            String
+  email           String?
+  phone           String?
+  status          GuruStatus
+  subject         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mentoredClasses Class[]      @relation("MentorTeacher")
+  classes        Class[]      @relation("RegularTeacher")
+  schedules      Schedule[]
+  attendances    Attendance[]
+  grades         Grade[]
+
+  @@index([nip])
+}
+
+// Enum for teacher status
+enum GuruStatus {
+  GURU_BIASA
+  GURU_PEMBIMBING
+  KEDUANYA
+}
+
+// Student model
+model Student {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  nis         String   @unique
+  name        String
+  email       String?
+  phone       String?
+  classId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class      Class?       @relation(fields: [classId], references: [id])
+  attendances Attendance[]
+  grades     Grade[]
+  mentorings Mentoring[]
+
+  @@index([nis])
+}
+
+// Class model
+model Class {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  grade             String
+  academicYear      String
+  mentorTeacherId   String?
+  regularTeacherId  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  mentorTeacher   Teacher    @relation("MentorTeacher", fields: [mentorTeacherId], references: [id])
+  regularTeacher  Teacher    @relation("RegularTeacher", fields: [regularTeacherId], references: [id])
+  students        Student[]
+  schedules       Schedule[]
+}
+
+// Schedule for mentoring sessions
+model Schedule {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  description String?
+  teacherId   String
+  classId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher     Teacher     @relation(fields: [teacherId], references: [id])
+  class       Class       @relation(fields: [classId], references: [id])
+  attendances Attendance[]
+  grades      Grade[]
+
+  @@index([date])
+  @@index([teacherId])
+  @@index([classId])
+}
+
+// Attendance tracking
+model Attendance {
+  id          String   @id @default(cuid())
+  scheduleId  String
+  studentId   String
+  teacherId   String
+  status      AttendanceStatus
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher  Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([scheduleId, studentId])
+  @@index([studentId])
+  @@index([teacherId])
+}
+
+// Enum for attendance status
+enum AttendanceStatus {
+  HADIR
+  SAKIT
+  IZIN
+  ALPA
+}
+
+// Grade/Assessment for mentoring
+model Grade {
+  id             String   @id @default(cuid())
+  scheduleId     String
+  studentId      String
+  teacherId      String
+  score          Float
+  remarks        String?
+  assessmentType String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher  Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([scheduleId, studentId])
+  @@index([studentId])
+  @@index([teacherId])
+}
+
+// Mentoring record for individual student guidance
+model Mentoring {
+  id           String   @id @default(cuid())
+  studentId    String
+  teacherId    String
+  title        String
+  description  String?
+  mentoringDate DateTime
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([mentoringDate])
+}
