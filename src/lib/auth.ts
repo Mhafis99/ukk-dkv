@@ -2,6 +2,16 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { db } from '@/lib/db'
+import type { DefaultSession } from 'next-auth'
+
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string
+      role: string
+    } & DefaultSession['user']
+  }
+}
 
 export const {
   handlers,
@@ -44,7 +54,7 @@ export const {
           email: user.email,
           name: user.name,
           role: user.role,
-        }
+        } as any
       },
     }),
   ],
