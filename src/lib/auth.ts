@@ -1,9 +1,14 @@
-import NextAuth, { type NextAuthConfig } from 'next-auth'
+import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { db } from '@/lib/db'
 
-export const authConfig: NextAuthConfig = {
+export const {
+  handlers,
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
   session: {
     strategy: 'jwt',
   },
@@ -15,6 +20,7 @@ export const authConfig: NextAuthConfig = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
+
       async authorize(credentials) {
         if (
           !credentials ||
@@ -28,10 +34,10 @@ export const authConfig: NextAuthConfig = {
           where: { email: credentials.email },
         })
 
-        if (!user) return null
+        if (!user || !user.password) return null
 
-        const isValid = await compare(credentials.password, user.password)
-        if (!isValid) return null
+        const valid = await compare(credentials.password, user.password)
+        if (!valid) return null
 
         return {
           id: user.id,
@@ -51,6 +57,7 @@ export const authConfig: NextAuthConfig = {
       }
       return token
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
@@ -65,9 +72,4 @@ export const authConfig: NextAuthConfig = {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-}
-
-/**
- * ⬇⬇⬇ INI YANG TADI KURANG ⬇⬇⬇
- */
-export const { auth, handlers, signIn, signOut } = NextAuth(authConfig)
+})
