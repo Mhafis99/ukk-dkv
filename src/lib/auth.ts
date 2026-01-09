@@ -1,9 +1,9 @@
-import type { NextAuthConfig } from 'next-auth'
+import NextAuth, { type NextAuthConfig } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { db } from '@/lib/db'
 
-export const authOptions: NextAuthConfig = {
+export const authConfig: NextAuthConfig = {
   session: {
     strategy: 'jwt',
   },
@@ -16,7 +16,6 @@ export const authOptions: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // 🔒 Type guard (WAJIB di v5)
         if (
           !credentials ||
           typeof credentials.email !== 'string' ||
@@ -26,23 +25,13 @@ export const authOptions: NextAuthConfig = {
         }
 
         const user = await db.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
+          where: { email: credentials.email },
         })
 
-        if (!user || !user.password) {
-          return null
-        }
+        if (!user) return null
 
-        const isValid = await compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isValid) {
-          return null
-        }
+        const isValid = await compare(credentials.password, user.password)
+        if (!isValid) return null
 
         return {
           id: user.id,
@@ -77,3 +66,8 @@ export const authOptions: NextAuthConfig = {
 
   secret: process.env.NEXTAUTH_SECRET,
 }
+
+/**
+ * ⬇⬇⬇ INI YANG TADI KURANG ⬇⬇⬇
+ */
+export const { auth, handlers, signIn, signOut } = NextAuth(authConfig)
