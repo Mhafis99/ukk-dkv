@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-const { hash } from 'bcryptjs'
+import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +14,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@sekolah.sch.id',
-      password: await hash('admin123'),
+      password: await hash('admin123', 10),
       name: 'Administrator',
       role: 'ADMIN'
     }
@@ -25,13 +25,14 @@ async function main() {
     update: {},
     create: {
       email: 'guru@sekolah.sch.id',
-      password: await hash('guru123'),
+      password: await hash('guru123', 10),
       name: 'Guru Pembimbing',
       role: 'GURU'
     }
   })
 
-  // Create multiple student users
+  // Create multiple student users and store their IDs
+  const siswaUsers: { [key: string]: string } = {}
   const siswaEmails = [
     'siswa1@sekolah.sch.id',
     'siswa2@sekolah.sch.id',
@@ -39,16 +40,17 @@ async function main() {
   ]
 
   for (const email of siswaEmails) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email },
       update: {},
       create: {
         email,
-        password: await hash('siswa123'),
+        password: await hash('siswa123', 10),
         name: email.split('@')[0].toUpperCase(),
         role: 'SISWA'
       }
     })
+    siswaUsers[email] = user.id
   }
 
   console.log('✅ Users created')
@@ -74,7 +76,14 @@ async function main() {
     where: { nip: '198602032004123456' },
     update: {},
     create: {
-      userId: (await prisma.user.findFirst({ where: { email: 'guru@sekolah.sch.id' }))!.id,
+      userId: (await prisma.user.create({
+        data: {
+          email: 'siti@sekolah.sch.id',
+          password: await hash('guru123', 10),
+          name: 'Siti Rahayu',
+          role: 'GURU'
+        }
+      })).id,
       nip: '198602032004123456',
       name: 'Siti Rahayu',
       email: 'siti@sekolah.sch.id',
@@ -93,7 +102,7 @@ async function main() {
     where: { nis: '2024001' },
     update: {},
     create: {
-      userId: (await prisma.user.findFirst({ where: { email: 'siswa1@sekolah.sch.id' }))!.id,
+      userId: siswaUsers['siswa1@sekolah.sch.id'],
       nis: '2024001',
       name: 'Ahmad Rizky',
       email: 'siswa1@sekolah.sch.id',
@@ -106,7 +115,7 @@ async function main() {
     where: { nis: '2024002' },
     update: {},
     create: {
-      userId: (await prisma.user.findFirst({ where: { email: 'siswa2@sekolah.sch.id' }))!.id,
+      userId: siswaUsers['siswa2@sekolah.sch.id'],
       nis: '2024002',
       name: 'Dewi Sartika',
       email: 'siswa2@sekolah.sch.id',
@@ -119,7 +128,7 @@ async function main() {
     where: { nis: '2024003' },
     update: {},
     create: {
-      userId: (await prisma.user.findFirst({ where: { email: 'siswa3@sekolah.sch.id' }))!.id,
+      userId: siswaUsers['siswa3@sekolah.sch.id'],
       nis: '2024003',
       name: 'Eko Pratama',
       email: 'siswa3@sekolah.sch.id',
@@ -191,55 +200,60 @@ async function main() {
   console.log('📅 Creating schedules...')
 
   const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
 
-  const jadwal1 = await prisma.schedule.upsert({
-    where: { id: 'schedule-1' },
-    update: {},
-    create: {
+  const jadwal1 = await prisma.schedule.create({
+    data: {
       title: 'Persiapan Uji Kompetensi',
       date: today,
-      startTime: new Date(today.setHours(8, 0, 0, 0)),
-      endTime: new Date(today.setHours(10, 0, 0, 0)),
+      startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0, 0, 0),
+      endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0, 0, 0),
       location: 'Ruang 301',
       description: 'Uji kompetensi untuk kelas X A',
-      teacherId: guruPembimbing.id,
-      classId: kelasXA.id
+      teacherId: guruPembimbing.id
     }
   })
 
-  const jadwal2 = await prisma.schedule.upsert({
-    where: { id: 'schedule-2' },
-    update: {},
-    create: {
+  const jadwal2 = await prisma.schedule.create({
+    data: {
       title: 'Latihan Soal',
       date: today,
-      startTime: new Date(today.setHours(10, 0, 0, 0)),
-      endTime: new Date(today.setHours(12, 0, 0, 0)),
+      startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0, 0, 0),
+      endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0),
       location: 'Ruang 301',
       description: 'Latihan soal untuk kelas XI A',
-      teacherId: guruPembimbing.id,
-      classId: kelasXIA.id
+      teacherId: guruPembimbing.id
     }
   })
 
-  const jadwal3 = await prisma.schedule.upsert({
-    where: { id: 'schedule-3' },
-    update: {},
-    create: {
+  const jadwal3 = await prisma.schedule.create({
+    data: {
       title: 'Review Materi',
       date: today,
-      startTime: new Date(today.setHours(13, 0, 0, 0)),
-      endTime: new Date(today.setHours(15, 0, 0, 0)),
+      startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0, 0, 0),
+      endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0, 0, 0),
       location: 'Lab Komputer',
       description: 'Review materi untuk kelas XII IPA',
-      teacherId: guruPembimbing.id,
-      classId: kelasXIIIPA.id
+      teacherId: guruPembimbing.id
     }
   })
 
   console.log('✅ Schedules created')
+
+  // Update schedules with class IDs
+  await prisma.schedule.update({
+    where: { id: jadwal1.id },
+    data: { classId: kelasXA.id }
+  })
+
+  await prisma.schedule.update({
+    where: { id: jadwal2.id },
+    data: { classId: kelasXIA.id }
+  })
+
+  await prisma.schedule.update({
+    where: { id: jadwal3.id },
+    data: { classId: kelasXIIIPA.id }
+  })
 
   // Create Attendance Records
   console.log('📊 Creating attendance records...')
